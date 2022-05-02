@@ -22,7 +22,7 @@ function setup() {
 
 function draw() {
     background(200);
-    //scale(10);
+    scale(3);
     push()
     //ground
     translate(0, 300, -200);
