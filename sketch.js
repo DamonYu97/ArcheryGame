@@ -2,9 +2,11 @@ var sketch;
 let isFrontControllerConnected = false;
 let isBackControllerConnected = false;
 let targetImage
+let arrow;
 
 function preload() {
     targetImage = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/target.png');
+    arrow = loadModel('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/Arrow.obj', true);
 }
 
 function setup() {
@@ -58,18 +60,30 @@ function draw() {
     fill(255);
     texture(targetImage);
     box(400, 400, 20);
-
-    pop();
+    translate(0, 0, 75);
     drawArrow();
+    translate(10, 0, 0);
+    drawArrow();
+    translate(-20, 0, 0);
+    drawArrow();
+    pop();
 }
 
 function drawArrow() {
+    push();
+    //rotateX(-10);
+    rotateY(90);
+    fill('red');
+    scale(0.8);
+    model(arrow);
+    pop();
+    /*
     push();
     fill(255);
     cylinder(0.5,40);
     translate(0, 20.5, 0)
     cone(0.5, 1);
-    pop();
+    pop();*/
 }
 
 function pariConntroller() {
