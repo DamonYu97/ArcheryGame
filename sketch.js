@@ -4,7 +4,7 @@ let isBackControllerConnected = false;
 let targetImage
 
 function preload() {
-    targetImage = loadImage('/asserts/target.png');
+    targetImage = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/target.png?token=GHSAT0AAAAAABQMUIDUG55H2X7YS77XSXNOYTQAPDQ');
 }
 
 function setup() {
