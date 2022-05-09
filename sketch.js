@@ -35,12 +35,12 @@ const gravity = 10;
 
 function preload() {
     soundFormats('mp3');
-    hitSound = loadSound('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/hit');
-    looseSound = loadSound('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/loose');
-    targetImage = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/target.png');
-    footprint = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/footprint.png');
-    arrow = loadModel('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/Arrow.obj', true);
-    bow = loadModel('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/bow.obj', true);
+    hitSound = loadSound('https://damonyuxxx.github.io/files/ArcheryGame/hit');
+    looseSound = loadSound('https://damonyuxxx.github.io/files/ArcheryGame/loose');
+    targetImage = loadImage('https://damonyuxxx.github.io/files/ArcheryGame/target.png');
+    footprint = loadImage('https://damonyuxxx.github.io/files/ArcheryGame/footprint.png');
+    arrow = loadModel('https://damonyuxxx.github.io/files/ArcheryGame/Arrow.obj', true);
+    bow = loadModel('https://damonyuxxx.github.io/files/ArcheryGame/bow.obj', true);
 }
 
 function setup() {
@@ -293,14 +293,24 @@ function drawRoom(light, mode) {
     }
 
     if (state === "start") {
-        if (arrowsLeft > 0 && buttonCode === 'dw') {
+        if (arrowsLeft > 0) {
+            if (buttonCode === 'dw') {
+                //console.log(distance);
+                drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, 900 + distance * 3);
+            } else if (buttonCode === 'ls') {
+                looseSound.play();
+                loose();
+                buttonCode = '';
+            }
+        }
+        /*if (arrowsLeft > 0 && buttonCode === 'dw') {
             //console.log(distance);
             drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, 900 + distance * 3);
         } else if (buttonCode === 'ls') {
             looseSound.play();
             loose();
             buttonCode = '';
-        }
+        }*/
         if (isShooting) {
             const currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * speed;
             if (currentArrowZ < targetZ) {
