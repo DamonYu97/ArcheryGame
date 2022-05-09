@@ -3,6 +3,7 @@ let isFrontControllerConnected = false;
 let isBackControllerConnected = false;
 let targetImage;
 let arrow;
+let bow;
 let video;
 let handpose;
 let handPosition = {
@@ -10,10 +11,36 @@ let handPosition = {
     y: 0
 };
 let distance = 0;
+let targetZ = 0;
+let arrowsInTarget = [];
+let state = 'pair';
+let loosePosition;
+let textScreen;
+let transitionCount = 0;
+let pairButton;
+let lastTime;
+let textDiv;
+let currentSelectedMode = 'practice';
+let light = 255;
+let footprint;
+let buttonCode;
+let isShooting = false;
+let arrowsLeft = 2;
+const arrowYOffset = -300;
+let telescopeOn = false;
+let hitSound;
+let looseSound;
+let speed = 1;
+const gravity = 10;
 
 function preload() {
+    soundFormats('mp3');
+    hitSound = loadSound('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/hit');
+    looseSound = loadSound('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/loose');
     targetImage = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/target.png');
+    footprint = loadImage('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/footprint.png');
     arrow = loadModel('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/Arrow.obj', true);
+    bow = loadModel('https://raw.githubusercontent.com/DamonYuXXX/ArcheryGame/main/asserts/bow.obj', true);
 }
 
 function setup() {
@@ -21,50 +48,287 @@ function setup() {
     sketch.class("sketch-style");
     sketch.position(0, 0, 'static');
     sketch.parent('sketch_parent');
+    textScreen = createGraphics(700,300);
+    textScreen.background(255, 149, 88, 200);
     angleMode(DEGREES);
-    button = createButton('Pair Controllers');
-    button.position(200, 200);
-    button.mousePressed(pariConntroller);
-    video = createCapture(VIDEO);
-    video.size(width, height);
-    handpose = ml5.handpose(video, () => {
-        console.log("model loaded");
-    });
-    handpose.on("predict", results => {
-        if (results.length > 0) {
-            handPosition = {
-                x: results[0].annotations.thumb[0][0] / 640 * width,
-                y: results[0].annotations.thumb[0][1] / 480 * height
-            }
-            //console.log(handPosition);
-        }
-    })
-    video.hide();
+    pairButton = createButton('Pick up your bow and arrows');
+    pairButton.class('pairBtn');
+    pairButton.position(width / 2 - 200, height / 2 -50);
+    pairButton.mousePressed(pariConntroller);
+}
+
+function loose() {
+    isShooting = true;
+    loosePosition = {
+        x: width/2 - handPosition.x,
+        y: handPosition.y - height/2 + arrowYOffset,
+        z: 900 + distance * 3
+    }
+    speed = 1 + distance / 5;
+    lastTime = millis();
 }
 
 function draw() {
-
-    ambientLight(255);
-    background(200);
+    background(255);
     //scale(1);
-    push()
+    if (state == 'pair') {
+        light = 220;
+        //draw pair scene
+        drawPairScene();
+        //pair succeed
+        if (isFrontControllerConnected && isBackControllerConnected && lastTime === undefined) {
+            pairButton.remove();
+            transitionCount = 0;
+            lastTime = millis();
+            console.log(lastTime);
+            textDiv = createDiv('Your equipments are ready!<br>Now enter a room');
+            textDiv.class('infoText')
+            textDiv.position(width / 2 - 230, height / 2 + 0);
+        }
+        if (lastTime != undefined) {
+            if (millis() - lastTime < 4000) {
+            } else {
+                textDiv.remove();
+                textScreen.remove();
+                state = 'pair-modeSelect';
+            }
+        }
+    } else if (state == 'pair-modeSelect') {
+        transitionCount++;
+        const degree = -90 + transitionCount;
+        if (degree != 0) {
+            rotateX(degree);
+        } else {
+            state = 'modeSelect';
+            transitionCount = 0;
+            textScreen = createGraphics(500,200);
+            textScreen.background(255);
+        }
+    } else if (state == 'modeSelect') {
+        const offset = transitionCount - 300;
+        if (buttonCode === 'L' && offset === 0) {
+            transitionCount = 0;
+            state = 'select-start';
+            buttonCode = '';
+        }
+        if (offset < 0) {
+            transitionCount += 4;
+        }
+        push();
+        translate(0, -200 + offset, 0);
+        //rotateY(frameCount);
+        push();
+        translate(-100, -200, 0);
+        box(20, 200, 20);
+        pop();
+        push();
+        translate(100, -200, 0);
+        box(20, 200, 20);
+        pop();
+        push();
+        translate(0, 0, 0);
+        textScreen.textSize(60);
+        textScreen.text('Practice Room', 50, 120);
+        texture(textScreen);
+        box(500, 200, 20);
+        pop();
+        pop();
+        //footprint button
+        push()
+        translate(0, 300, - offset);
+        texture(footprint);
+        noStroke();
+        box(100, 5, 100);
+        pop();
+    } else if (state == 'select-start') {
+        //console.log(buttonCode);
+        light = 255;
+        if (transitionCount < 300) {
+            transitionCount += 4;
+            translate(0, 0, transitionCount);
+        } else {
+            transitionCount = 0;
+            state = 'start';
+            video = createCapture(VIDEO);
+            translate(0, 0, 300);
+            video.size(width, height);
+            handpose = ml5.handpose(video, () => {
+                console.log("model loaded");
+            });
+            handpose.on("predict", results => {
+                if (results.length > 0) {
+                    handPosition = {
+                        x: results[0].annotations.thumb[0][0] / 640 * width,
+                        y: results[0].annotations.thumb[0][1] / 480 * height
+                    }
+                    //console.log(handPosition);
+                }
+            })
+            video.hide();
+        }
+    } else if (state === 'start') {
+        if (buttonCode === 'B') {
+            buttonCode = '';
+            telescopeOn = !telescopeOn;
+        }
+        if (telescopeOn) {
+            translate(0, 0, targetZ + 150);
+        }
+
+        drawRemainingArrows();
+        //rotateY(90);
+        translate(0, 0, 300);
+    }
+    translate(0, 300, -900);
+    drawRoom(light, currentSelectedMode);
+    //shooting arrow
+    if (state === 'start') {
+        fill(0, 255, 0);
+        push();
+        translate(width/2 - handPosition.x, handPosition.y - height/2, 0);
+        plane(10, 10);
+        pop();
+    }
+}
+
+function  drawRemainingArrows() {
+    push();
+    translate(-550, 200 );
+    rotateZ(-90);
+    scale(0.7);
+    for (let i = 0; i < arrowsLeft - 1; i++) {
+        fill('red');
+        model(arrow);
+        translate(0, 20, 0);
+    }
+    pop();
+}
+
+function drawPairScene() {
+    rotateX(-90);
+    push();
+    translate(0, 0, -250);
+    fill(200);
+    textScreen.textSize(100);
+    textScreen.fill(255);
+    textScreen.text('Archery Game', 30, 170);
+    texture(textScreen);
+    noStroke();
+    box(700, 10, 200);
+    //bow
+    stroke(0);
+    push();
+    translate(-300, -200, 350);
+    rotateX(90);
+    if (isFrontControllerConnected) {
+        fill('blue');
+    } else {
+        rotateY(frameCount * 2);
+        fill('gray');
+        noStroke();
+    }
+    scale(1.3);
+    model(bow);
+    pop();
+    //arrows
+    push();
+    translate(300, -200, 350);
+    rotateX(90);
+    rotateZ(-90);
+    scale(1.2);
+    if (isBackControllerConnected) {
+        fill('red');
+    } else {
+        rotateX(-frameCount * 2);
+        fill('gray');
+        noStroke();
+    }
+    model(arrow);
+    translate(0, 10, 0);
+    model(arrow);
+    translate(0, 10, 0);
+    model(arrow);
+    pop();
+    pop();
+}
+
+function drawRoom(light, mode) {
+    push();
+    ambientLight(light);
+    //room
     //ground
-    translate(0, 300, -500);
-    //rotateY(90);
     fill(255);
     box(3000, 3, 20);
-    fill('green');
+    fill(97, 178 ,216);
     box(3000, 2, 3000);
-    drawTarget();
-
-    drawArrow(width/2 - handPosition.x, handPosition.y - height/2, 1000 + distance);
-    pop();
-    fill(0, 255, 0);
+    //roof
+    fill(255);
+    translate(0, -1500, 0);
+    box(3000, 20, 3000);
+    translate(0, 1500, 0);
+    //walls
+    fill(255, 149, 88);
+    translate(-1500, 0, 0);
+    box(20, 3000, 3000);
+    fill(255, 149, 88);
+    translate(3000, 0, 0);
+    box(20, 3000, 3000);
+    fill(200,200,200, 200);
+    translate(-1500, 0, -1500);
+    box(3000, 3000, 20);
+    //move to center
+    translate(0, 0, 1500);
     push();
-    translate(width/2 - handPosition.x, handPosition.y - height/2, 0);
-    plane(10, 10);
+    if (mode === 'practice') {
+        targetZ = 300;
+        translate(0, 0, targetZ);
+    }
+    drawTarget();
     pop();
+    //draw all arrows in target
+    for (let i = 0; i < arrowsInTarget.length; i++){
+        const arrow = arrowsInTarget[i];
+        //console.log(arrow);
+        drawArrow(arrow.x, arrow.y, arrow.z);
+    }
 
+    if (state === "start") {
+        if (arrowsLeft > 0 && buttonCode === 'dw') {
+            //console.log(distance);
+            drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, 900 + distance * 3);
+        } else if (buttonCode === 'ls') {
+            looseSound.play();
+            loose();
+            buttonCode = '';
+        }
+        if (isShooting) {
+            const currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * speed;
+            if (currentArrowZ < targetZ) {
+                hitSound.play();
+                const arrow = {
+                    x: loosePosition.x,
+                    y: loosePosition.y,
+                    z: currentArrowZ
+                }
+                arrowsInTarget.push(arrow);
+                console.log(arrowsInTarget);
+                arrowsLeft--;
+                isShooting = false;
+            } else {
+                drawArrow(loosePosition.x, loosePosition.y, currentArrowZ);
+            }
+        } else {
+            if (buttonCode != 'dw' && arrowsLeft > 0) {
+                drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, 900);
+            }
+            if (arrowsLeft === 0 && buttonCode === 'A') {
+                buttonCode = '';
+                arrowsLeft = 2;
+                arrowsInTarget = [];
+            }
+        }
+    }
+    pop();
 }
 
 function drawTarget() {
@@ -98,7 +362,6 @@ function drawTarget() {
     texture(targetImage);
     box(400, 400, 20);
     pop();
-
 }
 
 function drawArrow(x, y, z) {
@@ -109,7 +372,7 @@ function drawArrow(x, y, z) {
     fill('red');
     stroke('black');
     strokeWeight(0.2);
-    scale(0.8);
+    scale(1);
     model(arrow);
     pop();
 }
@@ -117,10 +380,10 @@ function drawArrow(x, y, z) {
 function pariConntroller() {
     console.log(isFrontControllerConnected);
     microBitConnect();
+    //isFrontControllerConnected = true;
+    //isBackControllerConnected = true;
 }
-
 function microBitReceivedMessage(message){
-    console.log(message);
     if (message == undefined || message == null) {
         return;
     }
@@ -140,7 +403,16 @@ function microBitReceivedMessage(message){
 
     if (message.length > 0 && message.charAt(0) == 'D') {
         distance = Number(message.substr(1));
-        console.log(distance);
+        //console.log(distance);
+    }
+
+    if (message.length == 2 ) {
+        if (message.charAt(0) == 'b') {
+            buttonCode = message.charAt(1);
+        }
+        if (message === 'dw' || message === 'ls') {
+            buttonCode = message;
+        }
     }
 }
   

@@ -126,5 +126,5 @@ function onTxCharacteristicValueChanged(event) {
   }else{
     console.log("microBitReceivedMessage is not defined")
   }
-  console.log(receivedString);
+  //console.log(receivedString);
 }
