@@ -25,3 +25,20 @@ body {
     color: white;
     text-align: center;
 }
+
+.name {
+    font-size: 30px;
+    color: yellowgreen;
+    margin-right: 20px;
+}
+
+.value {
+    font-size: 40px;
+    color: brown;
+}
+
+.record {
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+}
