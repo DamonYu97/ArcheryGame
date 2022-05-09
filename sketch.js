@@ -16,17 +16,23 @@ let arrowsInTarget = [];
 let state = 'pair';
 let loosePosition;
 let textScreen;
+let modeRoomScreen;
+let practiceScreen;
+let easyScreen;
+let middleScreen;
+let hardScreen;
 let transitionCount = 0;
 let pairButton;
 let lastTime;
 let textDiv;
 let currentSelectedMode = 'practice';
+let modeSelectIndex = 0;
 let light = 255;
 let footprint;
 let buttonCode;
 let isShooting = false;
 let arrowsLeft = 2;
-const arrowYOffset = -300;
+const arrowYOffset = -250;
 let telescopeOn = false;
 let hitSound;
 let looseSound;
@@ -45,6 +51,9 @@ let targetCenter = {
     x: 0,
     y: -70
 };
+let arrowPositionBuffer = [];
+let avgArrowPosition;
+let bufferSize = 0;
 
 function preload() {
     soundFormats('mp3');
@@ -64,6 +73,28 @@ function setup() {
     sketch.parent('sketch_parent');
     textScreen = createGraphics(700,300);
     textScreen.background(255, 149, 88, 200);
+
+
+    practiceScreen = createGraphics(550,200);
+    practiceScreen.background(255);
+    practiceScreen.textSize(60);
+    practiceScreen.text('Practice Room', 80, 120);
+
+    easyScreen = createGraphics(550,200);
+    easyScreen.background(255);
+    easyScreen.textSize(60);
+    easyScreen.text('Easy Mode Room', 40, 120);
+
+    middleScreen = createGraphics(550,200);
+    middleScreen.background(255);
+    middleScreen.textSize(60);
+    middleScreen.text('Middle Mode Room', 20, 120);
+
+    hardScreen = createGraphics(550,200);
+    hardScreen.background(255);
+    hardScreen.textSize(60);
+    hardScreen.text('Hard Mode Room', 40, 120);
+
     angleMode(DEGREES);
     pairButton = createButton('Pick up your bow and arrows');
     pairButton.class('pairBtn');
@@ -74,8 +105,8 @@ function setup() {
 function loose() {
     isShooting = true;
     loosePosition = {
-        x: width/2 - handPosition.x,
-        y: handPosition.y - height/2 + arrowYOffset,
+        x: avgArrowPosition.x,
+        y: avgArrowPosition.y,
         z: arrowShootFrom + distance * 3
     }
     YSpeed = 1 + distance / 5;
@@ -113,18 +144,54 @@ function draw() {
         if (degree != 0) {
             rotateX(degree);
         } else {
+            modeSelectIndex = 0;
             state = 'modeSelect';
             transitionCount = 0;
-            textScreen = createGraphics(500,200);
-            textScreen.background(255);
         }
     } else if (state == 'modeSelect') {
+        arrowsLeft = 2;
+        arrowsInTarget = [];
+        if (shootsNumDiv != undefined) {
+            shootsNum = 0;
+            shootsNumDiv.remove();
+        }
+        if (scoresDiv != undefined) {
+            score = 0;
+            scoresDiv.remove();
+        }
         const offset = transitionCount - 300;
         if (buttonCode === 'L' && offset === 0) {
             transitionCount = 0;
             state = 'select-start';
             buttonCode = '';
         }
+        if (modeSelectIndex == 0) {
+            modeRoomScreen = practiceScreen;
+            currentSelectedMode = 'practice';
+        } else if (modeSelectIndex == 1) {
+            modeRoomScreen = easyScreen;
+            currentSelectedMode = 'easy';
+        } else if (modeSelectIndex == 2) {
+            modeRoomScreen = middleScreen;
+            currentSelectedMode = 'middle';
+        } else if (modeSelectIndex == 3) {
+            modeRoomScreen = hardScreen;
+            currentSelectedMode = 'hard';
+        }
+        if (buttonCode === 'A') {
+            modeSelectIndex++;
+            if (modeSelectIndex > 3) {
+                modeSelectIndex = 3;
+            }
+            buttonCode = '';
+        } else if (buttonCode === 'B') {
+            modeSelectIndex--;
+            if (modeSelectIndex < 0) {
+                modeSelectIndex = 0;
+            }
+            buttonCode = '';
+        }
+
         if (offset < 0) {
             transitionCount += 4;
         }
@@ -141,9 +208,7 @@ function draw() {
         pop();
         push();
         translate(0, 0, 0);
-        textScreen.textSize(60);
-        textScreen.text('Practice Room', 50, 120);
-        texture(textScreen);
+        texture(modeRoomScreen);
         box(500, 200, 20);
         pop();
         pop();
@@ -195,8 +260,21 @@ function draw() {
             buttonCode = '';
             telescopeOn = !telescopeOn;
         }
+        if (buttonCode === 'C') {
+            buttonCode = '';
+            state = 'modeSelect';
+
+        }
         if (telescopeOn) {
-            translate(0, 0, targetZ + 150);
+            if (currentSelectedMode === 'practice') {
+                translate(0, 0, targetZ + 150);
+            } else if (currentSelectedMode === 'easy') {
+                translate(0, 0, targetZ + 600);
+            } else if (currentSelectedMode === 'middle') {
+                translate(0, 0, targetZ + 1000);
+            } else if (currentSelectedMode === 'hard') {
+                translate(0, 0, targetZ + 1500);
+            }
         }
         if (isDrawing) {
             drawStrength();
@@ -316,8 +394,14 @@ function drawRoom(light, mode) {
     push();
     if (mode === 'practice') {
         targetZ = 300;
-        translate(0, 0, targetZ);
+    } else if (mode === 'easy') {
+        targetZ = 0;
+    } else if (mode === 'middle') {
+        targetZ = -300;
+    } else if (mode === 'hard') {
+        targetZ = -600;
     }
+    translate(0, 0, targetZ);
     drawTarget();
     pop();
     //draw all arrows in target
@@ -328,13 +412,16 @@ function drawRoom(light, mode) {
     }
 
     if (state === "start") {
+        stabiliseArrowPosition();
         if (arrowsLeft > 0) {
             if (buttonCode === 'dw') {
                 //console.log(distance);
                 if (!isDrawing) {
                     isDrawing = true;
                 }
-                drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, arrowShootFrom + distance * 3);
+
+                drawArrow(avgArrowPosition.x, avgArrowPosition.y, arrowShootFrom + distance * 3);
+                //drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, arrowShootFrom + distance * 3);
             } else if (buttonCode === 'ls') {
                 shootsNum++;
                 shootsNumDiv.html('<span class="name">Shoots</span><span class="value">' + shootsNum + '</span>');
@@ -354,18 +441,27 @@ function drawRoom(light, mode) {
             buttonCode = '';
         }*/
         if (isShooting) {
-            const currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * YSpeed;
-            const offsetY = gravity * Math.pow((millis() - lastTime) / 200, 2) / 2 ;
+            let currentArrowZ, offsetY;
+            if (currentSelectedMode === 'practice') {
+                currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * YSpeed;
+                offsetY = gravity * Math.pow((millis() - lastTime) / 200, 2) / 2 ;
+            } else {
+                currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * YSpeed * 3;
+                offsetY = gravity * Math.pow((millis() - lastTime) / 80, 2) / 2 ;
+            }
+
             const currentArrowY = loosePosition.y + offsetY;
             const inTarget = isInTarget(loosePosition.x, currentArrowY);
             if (currentArrowZ < targetZ + 40) {
                 if (inTarget || (!inTarget && currentArrowY > 200)) {
-                    const arrow = {
+                    let arrow = {
                         x: loosePosition.x,
                         y: currentArrowY,
                         z: currentArrowZ
                     }
                     if (inTarget) {
+                        if (arrow.z < targetZ - 50);
+                        arrow.z = targetZ + 40;
                         hitSound.play();
                         //compute the score
                         let singleScore = 0;
@@ -421,7 +517,8 @@ function drawRoom(light, mode) {
             }
         } else {
             if (buttonCode != 'dw' && arrowsLeft > 0) {
-                drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, arrowShootFrom);
+                drawArrow(avgArrowPosition.x, avgArrowPosition.y, arrowShootFrom + distance * 3);
+                //drawArrow(width/2 - handPosition.x, handPosition.y - height/2 + arrowYOffset, arrowShootFrom);
             }
             if (arrowsLeft === 0 && buttonCode === 'A') {
                 buttonCode = '';
@@ -431,6 +528,31 @@ function drawRoom(light, mode) {
         }
     }
     pop();
+}
+
+function stabiliseArrowPosition() {
+    //TODO stable
+    const currentX = width/2 - handPosition.x;
+    const currentY = handPosition.y - height/2 + arrowYOffset;
+    console.log(currentY);
+    arrowPositionBuffer[bufferSize % 10] = {
+        x: currentX,
+        y: currentY
+    };
+    bufferSize++;
+    let total = {
+        x: 0,
+        y: 0
+    }
+    for (let i = 0; i < arrowPositionBuffer.length; i++) {
+        total.x += arrowPositionBuffer[i].x;
+        total.y += arrowPositionBuffer[i].y;
+    }
+    avgArrowPosition = {
+        x: total.x / arrowPositionBuffer.length,
+        y: total.y / arrowPositionBuffer.length
+    }
+    console.log('avgX: ' + avgArrowPosition.x + 'avgY: ' + avgArrowPosition.y);
 }
 
 function isInTarget(x, y) {
