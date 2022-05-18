@@ -229,22 +229,24 @@ function draw() {
             transitionCount = 0;
             state = 'start';
 
-            video = createCapture(VIDEO);
-            translate(0, 0, 300);
-            video.size(width, height);
-            handpose = ml5.handpose(video, () => {
-                console.log("model loaded");
-            });
-            handpose.on("predict", results => {
-                if (results.length > 0) {
-                    handPosition = {
-                        x: results[0].annotations.thumb[0][0] / 640 * width,
-                        y: results[0].annotations.thumb[0][1] / 480 * height
+            if (video === undefined || video === null) {
+                video = createCapture(VIDEO);
+                translate(0, 0, 300);
+                video.size(width, height);
+                handpose = ml5.handpose(video, () => {
+                    console.log("model loaded");
+                });
+                handpose.on("predict", results => {
+                    if (results.length > 0) {
+                        handPosition = {
+                            x: results[0].annotations.thumb[0][0] / 640 * width,
+                            y: results[0].annotations.thumb[0][1] / 480 * height
+                        }
+                        //console.log(handPosition);
                     }
-                    //console.log(handPosition);
-                }
-            })
-            video.hide();
+                })
+                video.hide();
+            }
 
             score = 0;
             shootsNum = 0;
@@ -443,8 +445,8 @@ function drawRoom(light, mode) {
         if (isShooting) {
             let currentArrowZ, offsetY;
             if (currentSelectedMode === 'practice') {
-                currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * YSpeed;
-                offsetY = gravity * Math.pow((millis() - lastTime) / 200, 2) / 2 ;
+                currentArrowZ = loosePosition.z - (millis() - lastTime) / 50  * YSpeed;
+                offsetY = gravity * Math.pow((millis() - lastTime) / 800, 2) / 2 ;
             } else {
                 currentArrowZ = loosePosition.z - (millis() - lastTime) / 10 * YSpeed * 3;
                 offsetY = gravity * Math.pow((millis() - lastTime) / 80, 2) / 2 ;
@@ -611,6 +613,7 @@ function pariConntroller() {
     //isFrontControllerConnected = true;
     //isBackControllerConnected = true;
 }
+
 function microBitReceivedMessage(message){
     if (message == undefined || message == null) {
         return;
